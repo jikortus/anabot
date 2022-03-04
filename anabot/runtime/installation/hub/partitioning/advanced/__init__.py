@@ -447,3 +447,65 @@ def encrypt_data_handler(element, app_node, local_node):
 @handle_chck('/encrypt_data')
 def encrypt_data_check(element, app_node, local_node):
     return encrypt_data_manipulate(element, app_node, local_node, True)
+
+def infobar_manipulate(element, app_node, local_node, dryrun):
+    try:
+        infobar = getnode(app_node, "info bar")
+        infobar_label = getnode(infobar, "label")
+        infobar_message = infobar_label.text
+    except TimeoutError:
+        return NotFound("Info bar or info bar message")
+
+    if dryrun:
+        expected_message = get_attr(element, "message", "*")
+        translated_message = tr(expected_message)
+        if fnmatchcase(infobar_message, translated_message):
+            return Pass()
+        else:
+            return Fail("Message in info bar '%s' doesn't match the expected message '%s'." %
+                (infobar_message, translated_message))
+    default_handler(element, app_node, infobar_label)
+    # no action makes sense here (when dryrun == False), only a check
+    return Pass()
+
+@handle_act('/infobar')
+def infobar_handler(element, app_node, local_node):
+    return infobar_manipulate(element, app_node, local_node, False)
+
+@handle_chck('/infobar')
+def infobar_check(element, app_node, local_node):
+    return infobar_manipulate(element, app_node, local_node, True)
+
+def infobar_alert_manipulate(element, app_node, local_node, dryrun):
+    if not dryrun:
+        local_node.click()
+    try:
+        dialog = getnode(app_node, "alert")
+    except TimeoutError:
+        return Pass() if dryrun else NotFound("alert dialog")
+    if dryrun:
+        return Fail("Alert dialog is still visible.")
+    try:
+        alert_message = getnode(dialog, "label").text
+        close_button = getnode(dialog, "push button", tr("_Close"))
+    except TimeoutError:
+        return NotFound("alert label or close button")
+
+    expected_message = get_attr(element, "message", "*")
+    expected_message = tr(expected_message)
+    if fnmatchcase(alert_message, expected_message):
+        result = Pass()
+    else:
+        result = Fail("Alert message '%s' doesn't match expected message '%s'.")
+
+    close_button.click()
+    return result
+
+@handle_act('/infobar/alert')
+def infobar_alert_handler(element, app_node, local_node):
+    return infobar_alert_manipulate(element, app_node, local_node, False)
+
+@handle_chck('/infobar/alert')
+@check_action_result
+def infobar_alert_check(element, app_node, local_node):
+    return infobar_alert_manipulate(element, app_node, local_node, True)
