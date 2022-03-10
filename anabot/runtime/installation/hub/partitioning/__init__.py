@@ -115,54 +115,58 @@ def disk_handler(element, app_node, local_node):
 def disk_check(element, app_node, local_node):
     return disk_manipulate(element, app_node, local_node, True)
 
-# Anaconda doesn't provide enough information for ATK about disk selection
-# so we need to remember the disk selection ourself.
-__spec_disk_selection = {}
-def spec_disk_manipulate(element, app_node, local_node, dryrun):
-    def disk_name(node):
-        return node.children[0].children[3].text
-    name = get_attr(element, "name")
-    action = get_attr(element, "action", "select")
-    disks = getnodes(local_node, node_type="disk overview", visible=None)
-    # Expected behaviour is that all of the specialized disks selected
-    # in the specialized & network disks dialog are selected by default
-    # Maybe there's different behaviour in kickstart while ignoring drives.
-    if len(__spec_disk_selection) == 0:
-        d_names = [disk_name(d) for d in disks]
-        for d_name in d_names:
-            __spec_disk_selection[d_name] = True
-    # Filter those that match name attribute
-    disks = [disk for disk in disks if fnmatchcase(disk_name(disk), name)]
-    logger.debug("Filtered specialized & network disks: %s", ",".join([disk_name(d) for d in disks]))
-    if not disks:
-        return (False, "No specialized & network disk with name '%s' is available in GUI." % name)
-    for disk in disks:
-        if dryrun:
-            # report warning
-            reporter.log_info("Checking specialized & network disk selection doesn't work at the moment due to https://bugzilla.redhat.com/show_bug.cgi?id=1353850")
-            return True
-        else:
-            logger.debug("Selecting/deselecting disk: %s", disk_name(disk))
-            if action == "select" and not __spec_disk_selection[disk_name(disk)]:
-                logger.debug("Clicking on disk %s.", disk_name(disk))
-                scrollto(disk)
-                disk.click()
-                __spec_disk_selection[disk_name(disk)] = True
-            elif action == "deselect" and __spec_disk_selection[disk_name(disk)]:
-                logger.debug("Clicking on disk %s.", disk_name(disk))
-                scrollto(disk)
-                disk.click()
-                __spec_disk_selection[disk_name(disk)] = False
-    if dryrun:
-        return True
+# The specialized disk (de)selection code is not consistent under all circumstances,
+# e. g. when re-manipulating the selected devices from the 'specialized & network disks'
+# subspoke - if the code is to be reused, make sure to address that!!!
 
-@handle_act('/spec_disk')
-def spec_disk_handler(element, app_node, local_node):
-    spec_disk_manipulate(element, app_node, local_node, False)
-
-@handle_chck('/spec_disk')
-def spec_disk_check(element, app_node, local_node):
-    return spec_disk_manipulate(element, app_node, local_node, True)
+## Anaconda doesn't provide enough information for ATK about disk selection
+## so we need to remember the disk selection ourself.
+#__spec_disk_selection = {}
+#def spec_disk_manipulate(element, app_node, local_node, dryrun):
+#    def disk_name(node):
+#        return node.children[0].children[3].text
+#    name = get_attr(element, "name")
+#    action = get_attr(element, "action", "select")
+#    disks = getnodes(local_node, node_type="disk overview", visible=None)
+#    # Expected behaviour is that all of the specialized disks selected
+#    # in the specialized & network disks dialog are selected by default
+#    # Maybe there's different behaviour in kickstart while ignoring drives.
+#    if len(__spec_disk_selection) == 0:
+#        d_names = [disk_name(d) for d in disks]
+#        for d_name in d_names:
+#            __spec_disk_selection[d_name] = True
+#    # Filter those that match name attribute
+#    disks = [disk for disk in disks if fnmatchcase(disk_name(disk), name)]
+#    logger.debug("Filtered specialized & network disks: %s", ",".join([disk_name(d) for d in disks]))
+#    if not disks:
+#        return (False, "No specialized & network disk with name '%s' is available in GUI." % name)
+#    for disk in disks:
+#        if dryrun:
+#            # report warning
+#            reporter.log_info("Checking specialized & network disk selection doesn't work at the moment due to https://bugzilla.redhat.com/show_bug.cgi?id=1353850")
+#            return True
+#        else:
+#            logger.debug("Selecting/deselecting disk: %s", disk_name(disk))
+#            if action == "select" and not __spec_disk_selection[disk_name(disk)]:
+#                logger.debug("Clicking on disk %s.", disk_name(disk))
+#                scrollto(disk)
+#                disk.click()
+#                __spec_disk_selection[disk_name(disk)] = True
+#            elif action == "deselect" and __spec_disk_selection[disk_name(disk)]:
+#                logger.debug("Clicking on disk %s.", disk_name(disk))
+#                scrollto(disk)
+#                disk.click()
+#                __spec_disk_selection[disk_name(disk)] = False
+#    if dryrun:
+#        return True
+#
+#@handle_act('/spec_disk')
+#def spec_disk_handler(element, app_node, local_node):
+#    spec_disk_manipulate(element, app_node, local_node, False)
+#
+#@handle_chck('/spec_disk')
+#def spec_disk_check(element, app_node, local_node):
+#    return spec_disk_manipulate(element, app_node, local_node, True)
 
 def add_spec_disk_manipulate(element, app_node, local_node, dryrun):
     try:
